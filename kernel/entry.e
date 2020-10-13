@@ -2,9 +2,10 @@
 # 1 "<built-in>"
 # 1 "<command-line>"
 # 1 "entry.S"
-# 16 "entry.S"
+
+
 # 1 "linkage.h" 1
-# 17 "entry.S" 2
+# 4 "entry.S" 2
 
 R15 = 0x00
 R14 = 0x08

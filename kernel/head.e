@@ -2,9 +2,9 @@
 # 1 "<built-in>"
 # 1 "<command-line>"
 # 1 "head.S"
-# 16 "head.S"
+
 # 1 "linkage.h" 1
-# 17 "head.S" 2
+# 3 "head.S" 2
 
 .section .text
 
