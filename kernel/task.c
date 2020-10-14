@@ -17,7 +17,7 @@ void user_level_function()
 	long ret = 0;
 	// color_printk(RED,BLACK,"user_level_function task is running\n");
 
-	char string[]="Hello World!\n";
+	char string[]="Triple H OS >_< !!!\n";
 
 	__asm__	__volatile__	(	"leaq	sysexit_return_address(%%rip),	%%rdx	\n\t"
 					"movq	%%rsp,	%%rcx		\n\t"
