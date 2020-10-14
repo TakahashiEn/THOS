@@ -104,10 +104,10 @@ Disassembly of section .text:
  15d:	48 89 7d f8          	mov    %rdi,-0x8(%rbp)
  161:	48 b8 00 00 00 00 00 	movabs $0x0,%rax
  168:	00 00 00 
- 16b:	c7 00 a0 05 00 00    	movl   $0x5a0,(%rax)
+ 16b:	c7 00 00 04 00 00    	movl   $0x400,(%rax)
  171:	48 b8 00 00 00 00 00 	movabs $0x0,%rax
  178:	00 00 00 
- 17b:	c7 40 04 84 03 00 00 	movl   $0x384,0x4(%rax)
+ 17b:	c7 40 04 00 03 00 00 	movl   $0x300,0x4(%rax)
  182:	48 b8 00 00 00 00 00 	movabs $0x0,%rax
  189:	00 00 00 
  18c:	c7 40 08 00 00 00 00 	movl   $0x0,0x8(%rax)

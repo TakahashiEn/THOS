@@ -72,10 +72,14 @@ void init_memory()
 
 	for(i = 0;i < 32;i++)
 	{
-		color_printk(ORANGE,BLACK,"Address:%#018lx\tLength:%#018lx\tType:%#010x\n",p->address,p->length,p->type);
+		//color_printk(ORANGE,BLACK,"Address:%#018lx\tLength:%#018lx\tType:%#010x\n",p->address,p->length,p->type);
 		unsigned long tmp = 0;
-		if(p->type == 1)
+		if(p->type == 1){
+			//color_printk(RED,BLACK,"Before Total RAM:%#018lx\n",TotalMem);
+			//color_printk(RED,BLACK,"Length:%#018lx\n",p->length);
 			TotalMem +=  p->length;
+			//color_printk(RED,BLACK,"After Total RAM:%#018lx\n",TotalMem);
+		}
 
 		memory_management_struct.e820[i].address += p->address;
 
@@ -109,6 +113,8 @@ void init_memory()
 	color_printk(ORANGE,BLACK,"OS Can Used Total 2M PAGEs:%#010x=%010d\n",TotalMem,TotalMem);
 
 	TotalMem = memory_management_struct.e820[memory_management_struct.e820_length].address + memory_management_struct.e820[memory_management_struct.e820_length].length;
+
+	while(1);
 
 	//bits map construction init
 
