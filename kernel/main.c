@@ -7,6 +7,7 @@
 #include "memory.h"
 #include "task.h"
 #include "interrupt.h"
+#include "cpu.h"
 
 /*
 		static var 
@@ -36,6 +37,8 @@ void Start_Kernel(void)
 	set_tss64(_stack_start, _stack_start, _stack_start, 0xffff800000007c00, 0xffff800000007c00, 0xffff800000007c00, 0xffff800000007c00, 0xffff800000007c00, 0xffff800000007c00, 0xffff800000007c00);
 
 	sys_vector_init();
+
+	init_cpu();
 
 	memory_management_struct.start_code = (unsigned long)& _text;
 	memory_management_struct.end_code   = (unsigned long)& _etext;

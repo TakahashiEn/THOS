@@ -16,8 +16,8 @@ all: system.o
 	$(OBJCPOY) $(OBJCPOY_FLAGS) -O binary system.o kernel.bin
 	cp kernel.bin ../
 
-system.o: head.o entry.o main.o printk.o trap.o memory.o interrupt.o task.o
-	$(LD) $(LD_FLAGS) head.o entry.o main.o printk.o trap.o memory.o interrupt.o task.o -o system.o
+system.o: head.o entry.o main.o printk.o trap.o memory.o interrupt.o task.o cpu.o
+	$(LD) $(LD_FLAGS) head.o entry.o main.o printk.o trap.o memory.o interrupt.o task.o cpu.o -o system.o
 	$(OBJDUMP) -D system.o > system.d
 
 head.o:	head.S
@@ -53,6 +53,10 @@ interrupt.o: interrupt.c
 task.o: task.c
 	$(CC) $(CC_FLAGS) -c task.c
 	$(OBJDUMP) -D task.o > task.d
+
+cpu.o: cpu.c
+	$(CC) $(CC_FLAGS) -c cpu.c
+	$(OBJDUMP) -D cpu.o > cpu.d
 
 clean:
 	rm -rf *.o *.d *.s~ *.e *.S~ *.c~ *.h~ Makefile~ Kernel.lds~ kernel.bin
