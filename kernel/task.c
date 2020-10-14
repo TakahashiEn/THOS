@@ -99,6 +99,12 @@ unsigned long do_fork(struct pt_regs * regs, unsigned long clone_flags, unsigned
 	thd->rip = regs->rip;
 	thd->rsp = (unsigned long)tsk + STACK_SIZE - sizeof(struct pt_regs);
 
+	color_printk(ORANGE,BLACK,"thd->fs:%#018lx\n",thd->fs);
+	color_printk(ORANGE,BLACK,"thd->gs:%#018lx\n",thd->gs);
+
+	thd->fs = 0x0000;
+	thd->gs = 0x0000;
+
 	if(!(tsk->flags & PF_KTHREAD))
 		thd->rip = regs->rip = (unsigned long)ret_system_call;
 
@@ -188,12 +194,16 @@ void __switch_to(struct task_struct *prev,struct task_struct *next)
 	set_tss64(init_tss[0].rsp0, init_tss[0].rsp1, init_tss[0].rsp2, init_tss[0].ist1, init_tss[0].ist2, init_tss[0].ist3, init_tss[0].ist4, init_tss[0].ist5, init_tss[0].ist6, init_tss[0].ist7);
 
 	color_printk(WHITE,BLACK,"SAVE PREV FS GS\n");
-	__asm__ __volatile__("movq	%%fs,	%0 \n\t":"=a"(prev->thread->fs));
-	__asm__ __volatile__("movq	%%gs,	%0 \n\t":"=a"(prev->thread->gs));
+	__asm__ __volatile__("movq	%%fs,	%0 \n\t":"=a"(prev->thread->fs)::"memory");
+	__asm__ __volatile__("movq	%%gs,	%0 \n\t":"=a"(prev->thread->gs)::"memory");
 
 	color_printk(WHITE,BLACK,"LOAD NEXT FS GS\n");
-	__asm__ __volatile__("movq	%0,	%%gs \n\t"::"a"(next->thread->gs));
-	__asm__ __volatile__("movq	%0,	%%fs \n\t"::"a"(next->thread->fs));
+
+	color_printk(ORANGE,BLACK,"next->thread->fs:%#018lx\n",next->thread->fs);
+	color_printk(ORANGE,BLACK,"next->thread->gs:%#018lx\n",next->thread->gs);
+
+	__asm__ __volatile__("movq	%0,	%%fs \n\t"::"a"(next->thread->fs):);
+	__asm__ __volatile__("movq	%0,	%%gs \n\t"::"a"(next->thread->gs):);
 
 	color_printk(WHITE,BLACK,"__SWITCH_TO FINISH\n");
 }
