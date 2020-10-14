@@ -68,6 +68,7 @@ unsigned long init(unsigned long arg)
 
 unsigned long do_fork(struct pt_regs * regs, unsigned long clone_flags, unsigned long stack_start, unsigned long stack_size)
 {
+	color_printk(WHITE,BLACK,"DO FORK START\n");
 	struct task_struct *tsk = NULL;
 	struct thread_struct *thd = NULL;
 	struct Page *p = NULL;
@@ -102,6 +103,8 @@ unsigned long do_fork(struct pt_regs * regs, unsigned long clone_flags, unsigned
 		thd->rip = regs->rip = (unsigned long)ret_system_call;
 
 	tsk->state = TASK_RUNNING;
+
+	color_printk(WHITE,BLACK,"DO FORK FINISH\n");
 
 	return 0;
 }
@@ -176,18 +179,23 @@ int kernel_thread(unsigned long (* fn)(unsigned long), unsigned long arg, unsign
 void __switch_to(struct task_struct *prev,struct task_struct *next)
 {
 
+	color_printk(WHITE,BLACK,"__SWITCH_TO START\n");
 	init_tss[0].rsp0 = next->thread->rsp0;
-
-	set_tss64(init_tss[0].rsp0, init_tss[0].rsp1, init_tss[0].rsp2, init_tss[0].ist1, init_tss[0].ist2, init_tss[0].ist3, init_tss[0].ist4, init_tss[0].ist5, init_tss[0].ist6, init_tss[0].ist7);
-
-	__asm__ __volatile__("movq	%%fs,	%0 \n\t":"=a"(prev->thread->fs));
-	__asm__ __volatile__("movq	%%gs,	%0 \n\t":"=a"(prev->thread->gs));
-
-	__asm__ __volatile__("movq	%0,	%%fs \n\t"::"a"(next->thread->fs));
-	__asm__ __volatile__("movq	%0,	%%gs \n\t"::"a"(next->thread->gs));
 
 	color_printk(WHITE,BLACK,"prev->thread->rsp0:%#018lx\n",prev->thread->rsp0);
 	color_printk(WHITE,BLACK,"next->thread->rsp0:%#018lx\n",next->thread->rsp0);
+
+	set_tss64(init_tss[0].rsp0, init_tss[0].rsp1, init_tss[0].rsp2, init_tss[0].ist1, init_tss[0].ist2, init_tss[0].ist3, init_tss[0].ist4, init_tss[0].ist5, init_tss[0].ist6, init_tss[0].ist7);
+
+	color_printk(WHITE,BLACK,"SAVE PREV FS GS\n");
+	__asm__ __volatile__("movq	%%fs,	%0 \n\t":"=a"(prev->thread->fs));
+	__asm__ __volatile__("movq	%%gs,	%0 \n\t":"=a"(prev->thread->gs));
+
+	color_printk(WHITE,BLACK,"LOAD NEXT FS GS\n");
+	__asm__ __volatile__("movq	%0,	%%gs \n\t"::"a"(next->thread->gs));
+	__asm__ __volatile__("movq	%0,	%%fs \n\t"::"a"(next->thread->fs));
+
+	color_printk(WHITE,BLACK,"__SWITCH_TO FINISH\n");
 }
 
 /*

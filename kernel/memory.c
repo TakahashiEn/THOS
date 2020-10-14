@@ -81,13 +81,13 @@ void init_memory()
 			//color_printk(RED,BLACK,"After Total RAM:%#018lx\n",TotalMem);
 		}
 
-		memory_management_struct.e820[i].address += p->address;
+		memory_management_struct.e820[i].address = p->address;
 
-		memory_management_struct.e820[i].length	 += p->length;
+		memory_management_struct.e820[i].length	 = p->length;
 
 		memory_management_struct.e820[i].type	 = p->type;
 		
-		memory_management_struct.e820_length = i;
+		memory_management_struct.e820_length     = i;
 
 		p++;
 		if(p->type > 4 || p->length == 0 || p->type < 1)
@@ -103,18 +103,25 @@ void init_memory()
 		unsigned long start,end;
 		if(memory_management_struct.e820[i].type != 1)
 			continue;
+		//color_printk(BLUE,BLACK,"Before Align Start Address:%#018lx\n",memory_management_struct.e820[i].address);
 		start = PAGE_2M_ALIGN(memory_management_struct.e820[i].address);
+		//color_printk(BLUE,BLACK,"After Align Start Address:%#018lx\n",start);
+
+		//color_printk(BLUE,BLACK,"Before Align End Address:%#018lx\n",(memory_management_struct.e820[i].address + memory_management_struct.e820[i].length));
 		end   = ((memory_management_struct.e820[i].address + memory_management_struct.e820[i].length) >> PAGE_2M_SHIFT) << PAGE_2M_SHIFT;
+		//color_printk(BLUE,BLACK,"After Align End Address:%#018lx\n",end);
+
 		if(end <= start)
 			continue;
+		//color_printk(RED,BLACK,"Before Total RAM:%#018lx\n",TotalMem);
+		//color_printk(RED,BLACK,"Length:%#018lx\n",(end - start));
 		TotalMem += (end - start) >> PAGE_2M_SHIFT;
+		//color_printk(RED,BLACK,"After Total RAM:%#018lx\n",TotalMem);
 	}
 	
 	color_printk(ORANGE,BLACK,"OS Can Used Total 2M PAGEs:%#010x=%010d\n",TotalMem,TotalMem);
 
 	TotalMem = memory_management_struct.e820[memory_management_struct.e820_length].address + memory_management_struct.e820[memory_management_struct.e820_length].length;
-
-	while(1);
 
 	//bits map construction init
 
