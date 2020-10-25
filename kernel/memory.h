@@ -112,6 +112,17 @@ typedef struct {unsigned long pt;} pt_t;
 
 unsigned long * Global_CR3 = NULL;
 
+//
+// 保存物理地址结构信息的结构体
+// 是之前在引导阶段通过 BIOS
+// 中断服务获得的，
+// 每条结构体信息的大小为20B
+// 由于普通结构体在编译时都会
+// 进行结构体的对其，为了正确解
+// 析该结构体信息防止其对其要加
+// __attribute__((packed))
+// 属性信息
+//
 struct E820
 {
 	unsigned long address;
@@ -119,30 +130,39 @@ struct E820
 	unsigned int	type;
 }__attribute__((packed));
 
-
-/*
-
-*/
-
+// 
+// 全局内存描述符：
+// 用来管理全局的物理内存的分布，划分和使用情况的信息
+//
 struct Global_Memory_Descriptor
 {
 	struct E820 	e820[32];
 	unsigned long 	e820_length;
 
+	// 位图用于描述内存的使用情况
 	unsigned long * bits_map;
 	unsigned long 	bits_size;
 	unsigned long   bits_length;
 
+	// 页结构体数组， 表示了全局的内存内的所有的物理页
+	// 与位图是按顺序一一对应的
 	struct Page *	pages_struct;
 	unsigned long	pages_size;
 	unsigned long 	pages_length;
 
+	// 每一个Zone（内存块）代表着一块顺序连续的物理页
+	// 的聚集
 	struct Zone * 	zones_struct;
 	unsigned long	zones_size;
 	unsigned long 	zones_length;
 
-	unsigned long 	start_code , end_code , end_data , end_brk;
+	// 记载着内核映像的信息
+	unsigned long 	start_code;
+	unsigned long 	end_code;
+	unsigned long 	end_data;
+	unsigned long 	end_brk;
 
+	// GMD 结构体的末尾的地址
 	unsigned long	end_of_struct;	
 };
 

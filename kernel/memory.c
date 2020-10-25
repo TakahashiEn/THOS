@@ -67,7 +67,9 @@ void init_memory()
 	unsigned long TotalMem = 0 ;
 	struct E820 *p = NULL;	
 	
-	color_printk(BLUE,BLACK,"Display Physics Address MAP,Type(1:RAM,2:ROM or Reserved,3:ACPI Reclaim Memory,4:ACPI NVS Memory,Others:Undefine)\n");
+	color_printk(BLUE,BLACK,\
+		"Display Physics Address MAP,Type(1:RAM,2:ROM or Reserved,\
+		3:ACPI Reclaim Memory,4:ACPI NVS Memory,Others:Undefine)\n");
 	p = (struct E820 *)0xffff800000007e00;
 
 	for(i = 0;i < 32;i++)
