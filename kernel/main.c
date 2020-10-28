@@ -9,10 +9,13 @@
 #include "interrupt.h"
 #include "cpu.h"
 
-/*
-		static var 
-*/
+#if APIC
+	#include "APIC.h"
+#else
+	#include "8259A.h"
+#endif
 
+// 静态变量 全局可见的
 struct Global_Memory_Descriptor memory_management_struct = {{0},0};
 
 void Start_Kernel(void)
@@ -59,11 +62,16 @@ void Start_Kernel(void)
 	pagetable_init();
 	
 	color_printk(RED,BLACK,"interrupt init \n");
-	init_interrupt();
+	//init_interrupt();
+
+	#if APIC
+		APIC_IOAPIC_init();
+	#else
+		init_8259A();
+	#endif
 
 	// color_printk(RED,BLACK,"task_init \n");
 	// task_init();
 
-	while(1)
-		;
+	while(1);
 }

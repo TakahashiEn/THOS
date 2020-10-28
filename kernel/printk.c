@@ -299,18 +299,17 @@ int vsprintf(char * buf,const char *fmt, va_list args)
 /*
 
 */
-
-int color_printk(unsigned int FRcolor,unsigned int BKcolor,const char * fmt,...)
-{
+int core_printk(
+	unsigned int FRcolor,
+	unsigned int BKcolor,
+	const char * fmt,
+	va_list args
+){
 	int i = 0;
 	int count = 0;
 	int line = 0;
-	va_list args;
-	va_start(args, fmt);
 
 	i = vsprintf(buf,fmt, args);
-
-	va_end(args);
 
 	for(count = 0;count < i || line;count++)
 	{
@@ -335,7 +334,13 @@ int color_printk(unsigned int FRcolor,unsigned int BKcolor,const char * fmt,...)
 				if(Pos.YPosition < 0)
 					Pos.YPosition = (Pos.YResolution / Pos.YCharSize - 1) * Pos.YCharSize;
 			}	
-			putchar(Pos.FB_addr , Pos.XResolution , Pos.XPosition * Pos.XCharSize , Pos.YPosition * Pos.YCharSize , FRcolor , BKcolor , ' ');	
+			putchar(Pos.FB_addr , 
+					Pos.XResolution , 
+					Pos.XPosition * Pos.XCharSize , 
+					Pos.YPosition * Pos.YCharSize , 
+					FRcolor , 
+					BKcolor , 
+					' ');	
 		}
 		else if((unsigned char)*(buf + count) == '\t')
 		{
@@ -343,12 +348,20 @@ int color_printk(unsigned int FRcolor,unsigned int BKcolor,const char * fmt,...)
 
 Label_tab:
 			line--;
-			putchar(Pos.FB_addr , Pos.XResolution , Pos.XPosition * Pos.XCharSize , Pos.YPosition * Pos.YCharSize , FRcolor , BKcolor , ' ');	
+			putchar(Pos.FB_addr , 
+					Pos.XResolution , 
+					Pos.XPosition * Pos.XCharSize , 
+					Pos.YPosition * Pos.YCharSize , 
+					FRcolor , BKcolor , ' ');	
 			Pos.XPosition++;
 		}
 		else
 		{
-			putchar(Pos.FB_addr , Pos.XResolution , Pos.XPosition * Pos.XCharSize , Pos.YPosition * Pos.YCharSize , FRcolor , BKcolor , (unsigned char)*(buf + count));
+			putchar(Pos.FB_addr , 
+					Pos.XResolution , 
+					Pos.XPosition * Pos.XCharSize , 
+					Pos.YPosition * Pos.YCharSize , 
+					FRcolor , BKcolor , (unsigned char)*(buf + count));
 			Pos.XPosition++;
 		}
 
@@ -365,4 +378,31 @@ Label_tab:
 
 	}
 	return i;
+}
+
+int color_printk(unsigned int FRcolor,unsigned int BKcolor,const char * fmt,...)
+{
+
+	va_list args;
+	va_start(args, fmt);
+
+	int ret = core_printk(FRcolor, BKcolor, fmt, args);
+
+	va_end(args);
+
+	return ret;
+	
+}
+
+int printk(const char * fmt,...){
+
+	va_list args;
+	va_start(args, fmt);
+
+	int ret = core_printk(WHITE, BLACK, fmt, args);
+
+	va_end(args);
+
+	return ret;
+
 }

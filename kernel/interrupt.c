@@ -1,5 +1,3 @@
-
-
 #include "interrupt.h"
 #include "linkage.h"
 #include "lib.h"
@@ -49,6 +47,15 @@
 /*
 
 */
+
+// 向 do_IRQ()函数传入的参数为rsp值
+// rsp 由于已经压入了这么多寄存器，
+// 所以可以将其看为一个regs结构体
+// 所以传入的为regs的结构体指针(首地址为rsp)
+// rax中存放的是返回地址，伪造了个假的call指令
+// 这样当从do_IRQ()中返回后就会直接执行
+// ret_from_intr() 的指令（在entry.S中的）
+// 从中断中恢复环境并返回
 
 #define Build_IRQ(nr)							\
 void IRQ_NAME(nr);						\
@@ -122,48 +129,3 @@ void (* interrupt[24])(void)=
 	IRQ0x36_interrupt,
 	IRQ0x37_interrupt,
 };
-
-void init_interrupt()
-{
-	int i;
-	for(i = 32;i < 56;i++)
-	{
-		set_intr_gate(i , 2 , interrupt[i - 32]);
-	}
-
-	color_printk(RED,BLACK,"8259A init \n");
-
-	//8259A-master	ICW1-4
-	io_out8(0x20,0x11);
-	io_out8(0x21,0x20);
-	io_out8(0x21,0x04);
-	io_out8(0x21,0x01);
-
-	//8259A-slave	ICW1-4
-	io_out8(0xa0,0x11);
-	io_out8(0xa1,0x28);
-	io_out8(0xa1,0x02);
-	io_out8(0xa1,0x01);
-
-	//8259A-M/S	OCW1
-	io_out8(0x21,0xfd);
-	io_out8(0xa1,0xff);
-
-	sti();
-}
-
-/*
-
-*/
-
-void do_IRQ(struct pt_regs * regs,unsigned long nr)	//regs,nr
-{
-	unsigned char x;
-	color_printk(RED,BLACK,"do_IRQ:%#018lx\t",nr);
-	x = io_in8(0x60);
-	color_printk(RED,BLACK,"key code:%#018lx\t",x);
-	io_out8(0x20,0x20);
-	color_printk(RED,BLACK,"regs:%#018lx\t<RIP:%#018lx\tRSP:%#018lx>\n",regs,regs->rip,regs->rsp);
-}
-
-

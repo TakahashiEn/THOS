@@ -2,22 +2,27 @@
 # Created by Takahashi En
 #
 
-CC = x86_64-elf-gcc
-AS = x86_64-elf-as
-OBJCPOY = x86_64-elf-objcopy
-OBJDUMP = x86_64-elf-objdump
-LD = x86_64-elf-ld
+CC := x86_64-elf-gcc
+AS := x86_64-elf-as
+OBJCPOY := x86_64-elf-objcopy
+OBJDUMP := x86_64-elf-objdump
+LD := x86_64-elf-ld
 
-CC_FLAGS = -static -mcmodel=large -fno-builtin -m64 -fno-stack-protector
-OBJCPOY_FLAGS = -I elf64-x86-64 -S -R ".eh_frame" -R ".comment"
-LD_FLAGS = -b elf64-x86-64 -z muldefs -T Kernel.lds
+PIC_MODE := APIC
+
+CC_FLAGS := -static -mcmodel=large -fno-builtin \
+			-m64 -fno-stack-protector
+OBJCPOY_FLAGS := -I elf64-x86-64 -S -R ".eh_frame" -R ".comment"
+LD_FLAGS := -b elf64-x86-64 -z muldefs -T Kernel.lds
+OBJS := head.o entry.o main.o printk.o trap.o \
+		memory.o interrupt.o task.o cpu.o PIC.o
 
 all: system.o
 	$(OBJCPOY) $(OBJCPOY_FLAGS) -O binary system.o kernel.bin
 	cp kernel.bin ../
 
-system.o: head.o entry.o main.o printk.o trap.o memory.o interrupt.o task.o cpu.o
-	$(LD) $(LD_FLAGS) head.o entry.o main.o printk.o trap.o memory.o interrupt.o task.o cpu.o -o system.o
+system.o: $(OBJS)
+	$(LD) $(LD_FLAGS) $(OBJS) -o system.o
 	$(OBJDUMP) -D system.o > system.d
 
 head.o:	head.S
@@ -31,7 +36,7 @@ entry.o: entry.S
 	$(OBJDUMP) -D entry.o > entry.d
 	
 main.o:	main.c lib.h
-	$(CC) $(CC_FLAGS) -c main.c
+	$(CC) $(CC_FLAGS) -c main.c -D$(PIC_MODE)
 	$(OBJDUMP) -D main.o > main.d
 	
 printk.o: printk.c lib.h
@@ -57,6 +62,15 @@ task.o: task.c
 cpu.o: cpu.c
 	$(CC) $(CC_FLAGS) -c cpu.c
 	$(OBJDUMP) -D cpu.o > cpu.d
+
+ifeq ($(PIC_MODE),APIC)
+PIC.o: APIC.c
+	$(CC) $(CC_FLAGS) -c APIC.c -o PIC.o
+else
+PIC.o: 8259A.c
+	$(CC) $(CC_FLAGS) -c 8259A.c -o PIC.o
+endif
+	$(OBJDUMP) -D PIC.o > PIC.d
 
 clean:
 	rm -rf *.o *.d *.s~ *.e *.S~ *.c~ *.h~ Makefile~ Kernel.lds~ kernel.bin
