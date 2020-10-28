@@ -17,7 +17,7 @@ struct Global_Memory_Descriptor memory_management_struct = {{0},0};
 
 void Start_Kernel(void)
 {
-	int *addr = (int *)0xffff800000a00000;
+	int *addr = (int *)0xffff800003000000;
 	int i;
 
 	Pos.XResolution = 1024;
@@ -29,7 +29,7 @@ void Start_Kernel(void)
 	Pos.XCharSize = 8;
 	Pos.YCharSize = 16;
 
-	Pos.FB_addr = (int *)0xffff800000a00000;
+	Pos.FB_addr = (int *)0xffff800003000000;
 	Pos.FB_length = (Pos.XResolution * Pos.YResolution * 4 + PAGE_4K_SIZE - 1) & PAGE_4K_MASK;
 
 	load_TR(10);
@@ -48,11 +48,21 @@ void Start_Kernel(void)
 	color_printk(RED,BLACK,"memory init \n");
 	init_memory();
 
+	color_printk(RED,BLACK,"slab init \n");
+	slab_init();
+
+	color_printk(RED,BLACK,"frame buffer init \n");
+	frame_buffer_init();
+	color_printk(WHITE,BLACK,"frame_buffer_init() is OK \n");
+
+	color_printk(RED,BLACK,"pagetable init \n");	
+	pagetable_init();
+	
 	color_printk(RED,BLACK,"interrupt init \n");
 	init_interrupt();
 
-	color_printk(RED,BLACK,"task_init \n");
-	task_init();
+	// color_printk(RED,BLACK,"task_init \n");
+	// task_init();
 
 	while(1)
 		;
