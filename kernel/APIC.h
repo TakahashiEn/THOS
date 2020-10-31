@@ -5,6 +5,23 @@
 #include "ptrace.h"
 #include "interrupt.h"
 
+struct IOAPIC_map
+{
+	unsigned int physical_address;
+	unsigned char * virtual_index_address;
+	unsigned int *  virtual_data_address;
+	unsigned int *  virtual_EOI_address;
+}ioapic_map;
+
+unsigned long ioapic_rte_read(unsigned char index);
+
+void ioapic_rte_write(unsigned char index,unsigned long value);
+
+void IOAPIC_pagetable_remap();
+
+void IOAPIC_init();
+
+
 void do_IRQ(struct pt_regs * regs,unsigned long nr);
 
 void APIC_IOAPIC_init();

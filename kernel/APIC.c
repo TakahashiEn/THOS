@@ -8,9 +8,83 @@
 #include "cpu.h"
 #include "APIC.h"
 
-/*
+// 每个RTE表项为64位的，但是每次只能操作32位的
+// 所以要分两次进行， 读和写都是
 
-*/
+// 读的返回值是一个RTE表项 64位的
+unsigned long ioapic_rte_read(unsigned char index)
+{
+	unsigned long ret;
+
+	*ioapic_map.virtual_index_address = index + 1;
+	io_mfence();
+	ret = *ioapic_map.virtual_data_address;
+	ret <<= 32;
+	io_mfence();
+
+	*ioapic_map.virtual_index_address = index;		
+	io_mfence();
+	ret |= *ioapic_map.virtual_data_address;
+	io_mfence();
+
+	return ret;
+}
+
+// 写的参数value是一个RTE表项 64位的
+void ioapic_rte_write(unsigned char index,unsigned long value)
+{
+	*ioapic_map.virtual_index_address = index;
+	io_mfence();
+	*ioapic_map.virtual_data_address = value & 0xffffffff;
+	value >>= 32;
+	io_mfence();
+	
+	*ioapic_map.virtual_index_address = index + 1;
+	io_mfence();
+	*ioapic_map.virtual_data_address = value & 0xffffffff;
+	io_mfence();
+}
+
+void IOAPIC_pagetable_remap()
+{
+	unsigned long * tmp;
+	unsigned char * IOAPIC_addr = (unsigned char *)Phy_To_Virt(0xfec00000);
+
+	ioapic_map.physical_address = 0xfec00000;
+	ioapic_map.virtual_index_address  = IOAPIC_addr;
+	ioapic_map.virtual_data_address   = (unsigned int *)(IOAPIC_addr + 0x10);
+	ioapic_map.virtual_EOI_address    = (unsigned int *)(IOAPIC_addr + 0x40);
+	
+	Global_CR3 = Get_gdt();
+
+	tmp = Phy_To_Virt(Global_CR3 + (((unsigned long)IOAPIC_addr >> PAGE_GDT_SHIFT) & 0x1ff));
+	if (*tmp == 0)
+	{
+		unsigned long * virtual = kmalloc(PAGE_4K_SIZE,0);
+		set_mpl4t(tmp,mk_mpl4t(Virt_To_Phy(virtual),PAGE_KERNEL_GDT));
+	}
+
+	color_printk(YELLOW,BLACK,"1:%#018lx\t%#018lx\n",(unsigned long)tmp,(unsigned long)*tmp);
+
+	tmp = Phy_To_Virt((unsigned long *)(*tmp & (~ 0xfffUL)) + (((unsigned long)IOAPIC_addr >> PAGE_1G_SHIFT) & 0x1ff));
+	if(*tmp == 0)
+	{
+		unsigned long * virtual = kmalloc(PAGE_4K_SIZE,0);
+		set_pdpt(tmp,mk_pdpt(Virt_To_Phy(virtual),PAGE_KERNEL_Dir));
+	}
+
+	color_printk(YELLOW,BLACK,"2:%#018lx\t%#018lx\n",(unsigned long)tmp,(unsigned long)*tmp);
+	
+	tmp = Phy_To_Virt((unsigned long *)(*tmp & (~ 0xfffUL)) + (((unsigned long)IOAPIC_addr >> PAGE_2M_SHIFT) & 0x1ff));
+	set_pdt(tmp,mk_pdt(ioapic_map.physical_address,PAGE_KERNEL_Page | PAGE_PWT | PAGE_PCD));
+
+	color_printk(BLUE,BLACK,"3:%#018lx\t%#018lx\n",(unsigned long)tmp,(unsigned long)*tmp);
+
+	color_printk(BLUE,BLACK,"ioapic_map.physical_address:%#010x\t\t\n",ioapic_map.physical_address);
+	color_printk(BLUE,BLACK,"ioapic_map.virtual_address:%#018lx\t\t\n",(unsigned long)ioapic_map.virtual_index_address);
+
+	flush_tlb();
+}
 
 void Local_APIC_init()
 {
@@ -146,14 +220,55 @@ void Local_APIC_init()
 
 }
 
-/*
+void IOAPIC_init()
+{
+	int i ;
+	//	I/O APIC
+	//	I/O APIC	ID
 
-*/
+	// color_printk(GREEN,BLACK,"IOAPIC INDEX REG:%#010x\n",*ioapic_map.virtual_index_address);
+
+	// 将索引寄存器的值赋为 0x00
+	*ioapic_map.virtual_index_address = 0x00;
+	io_mfence();
+
+	// 将数据寄存器的值赋为 0x0f000000
+	*ioapic_map.virtual_data_address = 0x0f000000;
+	io_mfence();
+	color_printk(GREEN,BLACK,"Get IOAPIC ID REG:%#010x,ID:%#010x\n",*ioapic_map.virtual_data_address, *ioapic_map.virtual_data_address >> 24 & 0xf);
+	io_mfence();
+
+	//	I/O APIC	Version
+
+	// color_printk(GREEN,BLACK,"BEFORE Get IOAPIC Version REG:%#010x,MAX redirection enties:%#08d\n",*ioapic_map.virtual_data_address ,((*ioapic_map.virtual_data_address >> 16) & 0xff) + 1);
+
+	// 将索引寄存器的值赋为 0x01
+	*ioapic_map.virtual_index_address = 0x01;
+	io_mfence();
+
+	// 读取数据寄存器 （IOAPIC的version 寄存器的值）
+	color_printk(GREEN,BLACK,"Get IOAPIC Version REG:%#010x,MAX redirection enties:%#08d\n",*ioapic_map.virtual_data_address ,((*ioapic_map.virtual_data_address >> 16) & 0xff) + 1);
+
+	// RTE
+	// 初始化RTE表
+	// 暂时屏蔽所有中断	
+	for(i = 0x10;i < 0x40;i += 2)
+		ioapic_rte_write(i,0x10020 + ((i - 0x10) >> 1));
+
+	// 开启第一个RTE表项， 投递到处理器核心（BSP）
+	// 中断向量号位 0x21
+	ioapic_rte_write(0x12,0x21);
+	color_printk(GREEN,BLACK,"I/O APIC Redirection Table Entries Set Finished.\n");	
+}
 
 void APIC_IOAPIC_init()
 {
 	//	init trap abort fault
 	int i ;
+
+	// 地址重映射
+	// 将RTE 表映射到线性地址中去
+	IOAPIC_pagetable_remap();
 
 	for(i = 32;i < 56;i++)
 	{
@@ -166,19 +281,55 @@ void APIC_IOAPIC_init()
 	io_out8(0x21,0xff);
 	io_out8(0xa1,0xff);
 
+	//enable IMCR
+	io_out8(0x22,0x70);
+	io_out8(0x23,0x01);
+
 	//init local apic
 	Local_APIC_init();
 
-	// enable IF eflages
-	// 开中断？
+	//init ioapic
+	IOAPIC_init();
+
+	unsigned int x;
+	unsigned int * p;
+	
+	// //get RCBA address
+	// io_out32(0xcf8,0x8000f8f0);
+	// x = io_in32(0xcfc);
+	// color_printk(RED,BLACK,"Get RCBA Address:%#010x\n",x);	
+	// x = x & 0xffffc000;
+	// color_printk(RED,BLACK,"Get RCBA Address:%#010x\n",x);
+
 	sti();
+
+	// //get OIC address
+	// if(x > 0xfec00000 && x < 0xfee00000)
+	// {
+	// 	p = (unsigned int *)Phy_To_Virt(x + 0x31feUL);
+	// }
+
+	// //enable IOAPIC
+	// x = (*p & 0xffffff00) | 0x100;
+	// io_mfence();
+	// *p = x;
+	// io_mfence();
+
+	// // enable IF eflages
+	// // 开中断？
+	// sti();
 }
-
-/*
-
-*/
 
 void do_IRQ(struct pt_regs * regs,unsigned long nr)	//regs:rsp,nr
 {
-    printk("Triple H    ");
+	unsigned char x;
+
+	x = io_in8(0x60);	
+	color_printk(BLUE,WHITE,"(IRQ:%#04x)\tkey code:%#04x\n",nr,x);
+
+	__asm__ __volatile__(	"movq	$0x00,	%%rdx	\n\t"
+				"movq	$0x00,	%%rax	\n\t"
+				"movq 	$0x80b,	%%rcx	\n\t"
+				"wrmsr	\n\t"
+				:::"memory");
 }
