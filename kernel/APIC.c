@@ -318,6 +318,8 @@ void APIC_IOAPIC_init()
 	// // enable IF eflages
 	// // 开中断？
 	// sti();
+
+	
 }
 
 void do_IRQ(struct pt_regs * regs,unsigned long nr)	//regs:rsp,nr
