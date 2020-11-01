@@ -8,6 +8,66 @@
 #include "cpu.h"
 #include "APIC.h"
 
+
+// 中断使能
+void IOAPIC_enable(unsigned long irq)
+{
+	unsigned long value = 0;
+	value = ioapic_rte_read((irq - 32) * 2 + 0x10);
+	value = value & (~0x10000UL); 
+	ioapic_rte_write((irq - 32) * 2 + 0x10,value);
+}
+
+// 中断屏蔽
+void IOAPIC_disable(unsigned long irq)
+{
+	unsigned long value = 0;
+	value = ioapic_rte_read((irq - 32) * 2 + 0x10);
+	value = value | 0x10000UL; 
+	ioapic_rte_write((irq - 32) * 2 + 0x10,value);
+}
+
+// 添加RTE表项
+unsigned long IOAPIC_install(unsigned long irq,void * arg)
+{
+	struct IO_APIC_RET_entry *entry = (struct IO_APIC_RET_entry *)arg;
+	ioapic_rte_write((irq - 32) * 2 + 0x10,*(unsigned long *)entry);
+
+	return 1;
+}
+
+// 删除RTE表项
+void IOAPIC_uninstall(unsigned long irq)
+{
+	ioapic_rte_write((irq - 32) * 2 + 0x10,0x10000UL);
+}
+
+// 电平触发
+void IOAPIC_level_ack(unsigned long irq)
+{
+	__asm__ __volatile__(	"movq	$0x00,	%%rdx	\n\t"
+				"movq	$0x00,	%%rax	\n\t"
+				"movq 	$0x80b,	%%rcx	\n\t"
+				"wrmsr	\n\t"
+				:::"memory");
+				
+	*ioapic_map.virtual_EOI_address = 0;
+}
+
+// 边沿触发
+void IOAPIC_edge_ack(unsigned long irq)
+{
+	__asm__ __volatile__(	"movq	$0x00,	%%rdx	\n\t"
+				"movq	$0x00,	%%rax	\n\t"
+				"movq 	$0x80b,	%%rcx	\n\t"
+				"wrmsr	\n\t"
+				:::"memory");
+}
+
+
+
+
+
 // 每个RTE表项为64位的，但是每次只能操作32位的
 // 所以要分两次进行， 读和写都是
 
@@ -251,11 +311,13 @@ void IOAPIC_init()
 
 	// RTE
 	// 初始化RTE表
-	// 暂时屏蔽所有中断	
+	// 暂时屏蔽所有中断
+	// 中断向量号从 0x20（32 ～ 55）开始
+	// 因为之前的中断向量号都被异常或者其他的保留中断占用
 	for(i = 0x10;i < 0x40;i += 2)
 		ioapic_rte_write(i,0x10020 + ((i - 0x10) >> 1));
 
-	// 开启第一个RTE表项， 投递到处理器核心（BSP）
+	// 开启第一个RTE表项（中断向量号0x21）， 投递到处理器核心（BSP）
 	// 中断向量号位 0x21
 	ioapic_rte_write(0x12,0x21);
 	color_printk(GREEN,BLACK,"I/O APIC Redirection Table Entries Set Finished.\n");	
@@ -301,6 +363,8 @@ void APIC_IOAPIC_init()
 	// x = x & 0xffffc000;
 	// color_printk(RED,BLACK,"Get RCBA Address:%#010x\n",x);
 
+	memset(interrupt_desc,0,sizeof(irq_desc_T)*NR_IRQS);
+
 	sti();
 
 	// //get OIC address
@@ -328,6 +392,15 @@ void do_IRQ(struct pt_regs * regs,unsigned long nr)	//regs:rsp,nr
 
 	x = io_in8(0x60);	
 	color_printk(BLUE,WHITE,"(IRQ:%#04x)\tkey code:%#04x\n",nr,x);
+
+	irq_desc_T * irq = &interrupt_desc[nr - 32];
+
+	// 调用注册的中断响应函数
+	if(irq->handler != NULL)
+		irq->handler(nr,irq->parameter,regs);
+
+	if(irq->controller != NULL && irq->controller->ack != NULL)
+		irq->controller->ack(nr);
 
 	__asm__ __volatile__(	"movq	$0x00,	%%rdx	\n\t"
 				"movq	$0x00,	%%rax	\n\t"

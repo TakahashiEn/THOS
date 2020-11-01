@@ -13,8 +13,16 @@ struct gate_struct
 	unsigned char x[16];
 };
 
+// head.S 中定义的全局描述符表GDT
+// 每一个表项的大小为 8Bytes (64Bits)
 extern struct desc_struct GDT_Table[];
+
+// head.S 中定义的中断描述符表IDT
+// 每一个表项的大小为 8Bytes (64Bits)
 extern struct gate_struct IDT_Table[];
+
+// 任务状态段， 每一个任务状态段内有26个项
+// 每个项 4Bytes (32Bits)
 extern unsigned int TSS64_Table[26];
 
 /*

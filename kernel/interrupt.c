@@ -6,10 +6,6 @@
 #include "gate.h"
 #include "ptrace.h"
 
-/*
-
-*/
-
 #define SAVE_ALL				\
 	"cld;			\n\t"		\
 	"pushq	%rax;		\n\t"		\
@@ -37,16 +33,10 @@
 	"movq	%rdx,	%ds;	\n\t"		\
 	"movq	%rdx,	%es;	\n\t"
 
-/*
-
-*/
 
 #define IRQ_NAME2(nr) nr##_interrupt(void)
 #define IRQ_NAME(nr) IRQ_NAME2(IRQ##nr)
 
-/*
-
-*/
 
 // 向 do_IRQ()函数传入的参数为rsp值
 // rsp 由于已经压入了这么多寄存器，
@@ -69,9 +59,6 @@ __asm__ (	SYMBOL_NAME_STR(IRQ)#nr"_interrupt:		\n\t"	\
 			"jmp	do_IRQ	\n\t");
 
 
-/*
-
-*/
 
 Build_IRQ(0x20)
 Build_IRQ(0x21)
@@ -98,9 +85,6 @@ Build_IRQ(0x35)
 Build_IRQ(0x36)
 Build_IRQ(0x37)
 
-/*
-
-*/
 
 void (* interrupt[24])(void)=
 {
@@ -129,3 +113,42 @@ void (* interrupt[24])(void)=
 	IRQ0x36_interrupt,
 	IRQ0x37_interrupt,
 };
+
+int register_irq(unsigned long irq,
+		void * arg,
+		void (*handler)(unsigned long nr, unsigned long parameter, struct pt_regs * regs),
+		unsigned long parameter,
+		hw_int_controller * controller,
+		char * irq_name)
+{	
+	irq_desc_T * p = &interrupt_desc[irq - 32];
+	
+	p->controller = controller;
+	p->irq_name = irq_name;
+	p->parameter = parameter;
+	p->flags = 0;
+	p->handler = handler;
+
+	p->controller->install(irq,arg);
+	p->controller->enable(irq);
+	
+	return 1;
+}
+
+int unregister_irq(unsigned long irq)
+{
+	irq_desc_T * p = &interrupt_desc[irq - 32];
+
+	p->controller->disable(irq);
+	p->controller->uninstall(irq);
+
+	p->controller = NULL;
+	p->irq_name = NULL;
+	p->parameter = NULL;
+	p->flags = 0;
+	p->handler = NULL;
+
+	return 1; 
+}
+
+
